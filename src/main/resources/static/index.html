@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" href="/images/favicon-32x32.png" />
+        <title>PRS Expert</title>
+        <link rel="stylesheet" href="/css/chat.css" />
+    </head>
+    <body>
+        <div class="chat-container">
+            <div class="chat-header">
+                <img src="/images/prs-logo.png" alt="PRS Logo" />
+                <span>Knowledge Agent</span>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="message agent">
+                    <div class="message-bubble">Hello! I'm your PRS knowledge agent. How can I help you today?</div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <div class="input-container">
+                    <input type="text" id="messageInput" placeholder="Type your message here..." autocomplete="off" />
+                    <button id="sendButton">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Generate a unique session ID for this browser session
+            let sessionId = sessionStorage.getItem("chatSessionId");
+            if (!sessionId) {
+                sessionId = "session-" + Date.now() + "-" + Math.random().toString(36).substring(2, 9);
+                sessionStorage.setItem("chatSessionId", sessionId);
+            }
+
+            const chatMessages = document.getElementById("chatMessages");
+            const messageInput = document.getElementById("messageInput");
+            const sendButton = document.getElementById("sendButton");
+
+            function addMessage(text, isUser) {
+                const messageDiv = document.createElement("div");
+                messageDiv.className = `message ${isUser ? "user" : "agent"}`;
+                const thetop = chatMessages.scrollHeight;
+                if (text.includes("<html")) {
+                    let htmlT = text.substring(text.indexOf("<html"), text.indexOf("</html")) + "</html>";
+                    const bubbleDiv = document.createElement("div");
+                    bubbleDiv.className = "message-bubble";
+                    bubbleDiv.innerHTML = htmlT;
+                    messageDiv.appendChild(bubbleDiv);
+                } else if (text.trim().startsWith("<")) {
+                    text = text.trim();
+                    const bubbleDiv = document.createElement("div");
+                    bubbleDiv.className = "message-bubble";
+                    bubbleDiv.innerHTML = text;
+                    messageDiv.appendChild(bubbleDiv);
+                } else {
+                    const bubbleDiv = document.createElement("div");
+                    bubbleDiv.className = "message-bubble";
+                    bubbleDiv.textContent = text;
+                    messageDiv.appendChild(bubbleDiv);
+                }
+
+                chatMessages.appendChild(messageDiv);
+
+                // Scroll to bottom
+                chatMessages.scrollTop = thetop;
+            }
+
+            function addLoadingIndicator() {
+                const messageDiv = document.createElement("div");
+                messageDiv.className = "message agent";
+                messageDiv.id = "loading-indicator";
+
+                const bubbleDiv = document.createElement("div");
+                bubbleDiv.className = "message-bubble";
+
+                const loadingDiv = document.createElement("div");
+                loadingDiv.className = "loading";
+                loadingDiv.innerHTML = "<span></span><span></span><span></span>";
+
+                bubbleDiv.appendChild(loadingDiv);
+                messageDiv.appendChild(bubbleDiv);
+                chatMessages.appendChild(messageDiv);
+
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function removeLoadingIndicator() {
+                const loadingIndicator = document.getElementById("loading-indicator");
+                if (loadingIndicator) {
+                    loadingIndicator.remove();
+                }
+            }
+
+            async function sendMessage() {
+                const userMessage = messageInput.value.trim();
+
+                if (!userMessage) {
+                    return;
+                }
+
+                // Add user message to chat
+                addMessage(userMessage, true);
+
+                // Clear input and disable send button
+                messageInput.value = "";
+                sendButton.disabled = true;
+                messageInput.disabled = true;
+
+                // Show loading indicator
+                addLoadingIndicator();
+
+                try {
+                    const response = await fetch(`/prsKnowledgeAgent?userMessage=${encodeURIComponent(userMessage)}`);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const agentResponse = await response.text();
+
+                    // Remove loading indicator
+                    removeLoadingIndicator();
+
+                    // Add agent response to chat
+                    addMessage(agentResponse, false);
+                } catch (error) {
+                    console.error("Error calling prs knowledge agent:", error);
+                    removeLoadingIndicator();
+                    addMessage("Sorry, I encountered an error. Please try again.", false);
+                } finally {
+                    // Re-enable send button and input
+                    sendButton.disabled = false;
+                    messageInput.disabled = false;
+                    messageInput.focus();
+                }
+            }
+
+            // Send message on button click
+            sendButton.addEventListener("click", sendMessage);
+
+            // Send message on Enter key
+            messageInput.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") {
+                    sendMessage();
+                }
+            });
+
+            // Focus input on load
+            messageInput.focus();
+        </script>
+    </body>
+</html>

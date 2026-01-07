@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+    prs-agent:
+        build: .
+        container_name: prs-agent
+        ports:
+            - "80:8080"
+            - "8080:8080"
+        environment:
+            - REDIS_URL=redis://host.docker.internal:6379
+            - REDIS_HOST=host.docker.internal
+            - REDIS_PORT=6379
+            - FIRECRAWL_APIKEY=${FIRECRAWL_APIKEY:-}
+            - JAVA_OPTS=${JAVA_OPTS:--Xms1g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -Xlog:gc*:file=/app/gc.log -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/heapdump.hprof}
+            - LOGGING_LEVEL_ROOT=DEBUG
+            - LOGGING_LEVEL_ORG_MUSSER=DEBUG
+        networks:
+            - prs-network
+        restart: unless-stopped
+
+networks:
+    prs-network:
+        driver: bridge
