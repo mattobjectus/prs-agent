@@ -21,8 +21,6 @@ steps:
           - "--platform"
           - "managed"
           - "--allow-unauthenticated"
-          - "--set-env-vars"
-          - "REDIS_HOST=${_REDIS_HOST},REDIS_PORT=${_REDIS_PORT}"
           - "--set-secrets"
           - "AI_API_KEY=ai-api-key:latest"
           - "--memory"
@@ -42,8 +40,3 @@ images:
 options:
     machineType: "N1_HIGHCPU_8"
     logging: CLOUD_LOGGING_ONLY
-
-# Substitutions for environment-specific values
-substitutions:
-    _REDIS_HOST: "your-redis-host"
-    _REDIS_PORT: "6379"

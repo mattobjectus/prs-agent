@@ -15,14 +15,10 @@ This guide explains how to deploy the PRS Knowledge Agent application to Google 
 │  (Container)    │
 └────────┬────────┘
          │
-         ├──────────────┐
-         │              │
-         ▼              ▼
-┌─────────────┐  ┌─────────────┐
-│  Redis      │  │   Grok AI   │
-│  (Memorystore│  │   (xAI)     │
-│   or Cloud  │  └─────────────┘
-│   Run Redis)│
+         ▼
+┌─────────────┐
+│   Grok AI   │
+│   (xAI)     │
 └─────────────┘
 ```
 
@@ -31,7 +27,6 @@ This guide explains how to deploy the PRS Knowledge Agent application to Google 
 1. **Google Cloud Account** with billing enabled
 2. **gcloud CLI** installed and configured
 3. **Docker** (optional, for local testing)
-4. **Redis Instance** (Memorystore or external)
 
 ## 🚀 Quick Deploy
 
@@ -53,34 +48,7 @@ gcloud services enable \
     secretmanager.googleapis.com
 ```
 
-### 2. Create Redis Instance
-
-#### Option A: Cloud Memorystore (Recommended for Production)
-
-```bash
-# Create Redis instance
-gcloud redis instances create prs-redis \
-    --size=1 \
-    --region=$REGION \
-    --redis-version=redis_7_0
-
-# Get the Redis host
-export REDIS_HOST=$(gcloud redis instances describe prs-redis \
-    --region=$REGION \
-    --format="value(host)")
-
-echo "Redis Host: $REDIS_HOST"
-```
-
-#### Option B: External Redis
-
-```bash
-# Use your existing Redis connection details
-export REDIS_HOST=your-redis-host
-export REDIS_PORT=6379
-```
-
-### 3. Store Secrets in Secret Manager
+### 2. Store Secrets in Secret Manager
 
 ```bash
 # Create the AI API Key secret
@@ -94,25 +62,13 @@ gcloud secrets add-iam-policy-binding ai-api-key \
     --role=roles/secretmanager.secretAccessor
 ```
 
-### 4. Update cloudbuild.yaml
-
-Edit `cloudbuild.yaml` and update the substitutions:
-
-```yaml
-substitutions:
-    _REDIS_HOST: "your-redis-host-ip"
-    _REDIS_PORT: "6379"
-```
-
-### 5. Deploy with Cloud Build
+### 3. Deploy with Cloud Build
 
 #### Option A: From Local Machine
 
 ```bash
 # Submit build to Cloud Build
-gcloud builds submit \
-    --config=cloudbuild.yaml \
-    --substitutions=_REDIS_HOST=$REDIS_HOST,_REDIS_PORT=6379
+gcloud builds submit --config=cloudbuild.yaml
 ```
 
 #### Option B: Continuous Deployment from GitHub
@@ -125,13 +81,12 @@ gcloud alpha builds triggers create github \
     --repo-name=prs-agent \
     --repo-owner=your-github-username \
     --branch-pattern="^main$" \
-    --build-config=cloudbuild.yaml \
-    --substitutions=_REDIS_HOST=$REDIS_HOST,_REDIS_PORT=6379
+    --build-config=cloudbuild.yaml
 ```
 
 2. **Push to GitHub** - deployment happens automatically!
 
-### 6. Get Your Service URL
+### 4. Get Your Service URL
 
 ```bash
 gcloud run services describe prs-knowledge-agent \
@@ -156,7 +111,6 @@ gcloud run deploy prs-knowledge-agent \
     --region=$REGION \
     --platform=managed \
     --allow-unauthenticated \
-    --set-env-vars="REDIS_HOST=$REDIS_HOST,REDIS_PORT=6379" \
     --set-secrets="AI_API_KEY=ai-api-key:latest" \
     --memory=2Gi \
     --cpu=2 \
@@ -171,11 +125,9 @@ gcloud run deploy prs-knowledge-agent \
 
 Set via `--set-env-vars` flag:
 
-| Variable     | Description                         | Example    |
-| ------------ | ----------------------------------- | ---------- |
-| `REDIS_HOST` | Redis hostname                      | `10.0.0.3` |
-| `REDIS_PORT` | Redis port                          | `6379`     |
-| `PORT`       | Server port (auto-set by Cloud Run) | `8080`     |
+| Variable | Description                         | Example |
+| -------- | ----------------------------------- | ------- |
+| `PORT`   | Server port (auto-set by Cloud Run) | `8080`  |
 
 ### Secrets
 
@@ -224,20 +176,6 @@ gcloud run services add-iam-policy-binding prs-knowledge-agent \
     --region=$REGION \
     --member=user:alice@example.com \
     --role=roles/run.invoker
-```
-
-### VPC Connector (for Memorystore)
-
-```bash
-# Create VPC connector
-gcloud compute networks vpc-access connectors create prs-connector \
-    --region=$REGION \
-    --range=10.8.0.0/28
-
-# Update Cloud Run to use VPC
-gcloud run services update prs-knowledge-agent \
-    --region=$REGION \
-    --vpc-connector=prs-connector
 ```
 
 ## 📊 Monitoring
@@ -322,7 +260,6 @@ gcloud run services update prs-knowledge-agent \
 
 -   **Cloud Run**: $0.00002400/vCPU-second, $0.00000250/GiB-second
 -   **Container Registry**: $0.026/GB/month
--   **Memorystore**: Starting at $0.065/GB/hour
 -   **Cloud Build**: 120 build-minutes/day free
 
 ## 🐛 Troubleshooting
@@ -334,20 +271,9 @@ gcloud run services update prs-knowledge-agent \
 gcloud run services logs tail prs-knowledge-agent --region=$REGION
 
 # Common issues:
-# 1. Redis connection: Check VPC connector or Redis IP
-# 2. Secrets not accessible: Check IAM permissions
-# 3. Memory limit: Increase --memory
-```
-
-### Redis Connection Issues
-
-```bash
-# Test Redis connectivity
-gcloud compute ssh test-vm --zone=us-central1-a --command="
-  redis-cli -h $REDIS_HOST ping
-"
-
-# For Memorystore, ensure VPC connector is configured
+# 1. Secrets not accessible: Check IAM permissions
+# 2. Memory limit: Increase --memory
+# 3. Timeout: Adjust --timeout setting
 ```
 
 ### Secret Not Loading
@@ -385,16 +311,12 @@ gcloud run services delete prs-knowledge-agent --region=$REGION
 -   [Cloud Run Documentation](https://cloud.google.com/run/docs)
 -   [Cloud Build Documentation](https://cloud.google.com/build/docs)
 -   [Secret Manager Documentation](https://cloud.google.com/secret-manager/docs)
--   [Memorystore for Redis](https://cloud.google.com/memorystore/docs/redis)
 
 ## ✅ Deployment Checklist
 
 -   [ ] Enable required GCP APIs
--   [ ] Create Redis instance (Memorystore or external)
 -   [ ] Store API key in Secret Manager
--   [ ] Update cloudbuild.yaml with Redis details
 -   [ ] Submit build with Cloud Build
--   [ ] Configure VPC connector (if using Memorystore)
 -   [ ] Test the deployed service
 -   [ ] Set up monitoring and alerts
 -   [ ] Configure autoscaling
