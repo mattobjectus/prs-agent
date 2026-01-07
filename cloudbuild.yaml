@@ -1,0 +1,49 @@
+steps:
+    # Build the container image
+    - name: "gcr.io/cloud-builders/docker"
+      args: ["build", "-t", "gcr.io/$PROJECT_ID/prs-knowledge-agent:$COMMIT_SHA", "."]
+
+    # Push the container image to Container Registry
+    - name: "gcr.io/cloud-builders/docker"
+      args: ["push", "gcr.io/$PROJECT_ID/prs-knowledge-agent:$COMMIT_SHA"]
+
+    # Deploy container image to Cloud Run
+    - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+      entrypoint: gcloud
+      args:
+          - "run"
+          - "deploy"
+          - "prs-knowledge-agent"
+          - "--image"
+          - "gcr.io/$PROJECT_ID/prs-knowledge-agent:$COMMIT_SHA"
+          - "--region"
+          - "us-central1"
+          - "--platform"
+          - "managed"
+          - "--allow-unauthenticated"
+          - "--set-env-vars"
+          - "REDIS_HOST=${_REDIS_HOST},REDIS_PORT=${_REDIS_PORT}"
+          - "--set-secrets"
+          - "AI_API_KEY=ai-api-key:latest"
+          - "--memory"
+          - "2Gi"
+          - "--cpu"
+          - "2"
+          - "--timeout"
+          - "300"
+          - "--max-instances"
+          - "10"
+          - "--min-instances"
+          - "1"
+
+images:
+    - "gcr.io/$PROJECT_ID/prs-knowledge-agent:$COMMIT_SHA"
+
+options:
+    machineType: "N1_HIGHCPU_8"
+    logging: CLOUD_LOGGING_ONLY
+
+# Substitutions for environment-specific values
+substitutions:
+    _REDIS_HOST: "your-redis-host"
+    _REDIS_PORT: "6379"
