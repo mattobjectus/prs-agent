@@ -35,7 +35,7 @@ steps:
           - "1"
 
 images:
-    - "gcr.io/$PROJECT_ID/prs-knowledge-agent:$COMMIT_SHA"
+    - "gcr.io/$PROJECT_ID/prs-agent:$COMMIT_SHA"
 
 options:
     machineType: "N1_HIGHCPU_8"
