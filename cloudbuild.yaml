@@ -1,11 +1,11 @@
 steps:
     # Build the container image
     - name: "gcr.io/cloud-builders/docker"
-      args: ["build", "-t", "gcr.io/$PROJECT_ID/prs-knowledge-agent:$COMMIT_SHA", "."]
+      args: ["build", "-t", "gcr.io/$PROJECT_ID/prs-knowledge-agent:$BUILD_ID", "."]
 
     # Push the container image to Container Registry
     - name: "gcr.io/cloud-builders/docker"
-      args: ["push", "gcr.io/$PROJECT_ID/prs-knowledge-agent:$COMMIT_SHA"]
+      args: ["push", "gcr.io/$PROJECT_ID/prs-knowledge-agent:$BUILD_ID"]
 
     # Deploy container image to Cloud Run
     - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
@@ -15,7 +15,7 @@ steps:
           - "deploy"
           - "prs-knowledge-agent"
           - "--image"
-          - "gcr.io/$PROJECT_ID/prs-knowledge-agent:$COMMIT_SHA"
+          - "gcr.io/$PROJECT_ID/prs-knowledge-agent:$BUILD_ID"
           - "--region"
           - "us-central1"
           - "--platform"
@@ -35,7 +35,7 @@ steps:
           - "1"
 
 images:
-    - "gcr.io/$PROJECT_ID/prs-agent:$COMMIT_SHA"
+    - "gcr.io/$PROJECT_ID/prs-knowledge-agent:$BUILD_ID"
 
 options:
     machineType: "N1_HIGHCPU_8"
