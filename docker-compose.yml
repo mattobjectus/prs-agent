@@ -7,6 +7,8 @@ services:
         ports:
             - "80:8080"
             - "8080:8080"
+        env_file:
+            - .env
         environment:
             - REDIS_URL=redis://host.docker.internal:6379
             - REDIS_HOST=host.docker.internal

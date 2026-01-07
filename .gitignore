@@ -2,3 +2,10 @@
 /.mvn
 .DS_Store
 /target
+
+# Secrets and environment files
+secrets.txt
+.env
+.env.local
+*.key
+*.pem

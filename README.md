@@ -266,7 +266,11 @@ JAVA_OPTS: "-Xms2g -Xmx8g -XX:+UseG1GC"
 
 ### Embedding Generation is Slow
 
-The first startup takes ~25 seconds to embed 13,720 text segments. Subsequent startups are faster as embeddings are cached in Redis.
+The first startup takes ~25 seconds to embed 13,720 text segments. Subsequent startups are faster as embeddings are cached in Redis. This has been delegated to a background thread during start up so the service is available
+but may take a half a minute to get a better brain so to speak.
+The optimal version of this app uses a redis cache to store all the additional knowledge in and therefore
+it is persisted and start up becomes very fast. The amount of data exceeds and free tier redis hosting
+so we are not using it.
 
 ## 📊 Performance
 
