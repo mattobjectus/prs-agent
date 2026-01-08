@@ -24,7 +24,9 @@
                     <button id="sendButton">Send</button>
                 </div>
                 <div class="audio-controls">
-                    <button id="muteButton" class="control-button" title="Mute/Unmute">🎤</button>
+                    <button id="muteButton" class="control-button" title="Mute/Unmute">
+                        <img id="muteIcon" src="/images/unmuted.png" alt="Unmuted" style="width: 24px; height: 24px" />
+                    </button>
                     <input
                         type="range"
                         id="volumeSlider"
@@ -50,14 +52,42 @@
             const messageInput = document.getElementById("messageInput");
             const sendButton = document.getElementById("sendButton");
             const muteButton = document.getElementById("muteButton");
+            const muteIcon = document.getElementById("muteIcon");
             const volumeSlider = document.getElementById("volumeSlider");
 
-            // Text-to-Speech setup
-            let isMuted = false;
-            let currentVolume = 0.8; // 80% volume by default
+            // Cookie helper functions
+            function setCookie(name, value, days = 365) {
+                const date = new Date();
+                date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+                document.cookie = `${name}=${value};expires=${date.toUTCString()};path=/`;
+            }
+
+            function getCookie(name) {
+                const nameEQ = name + "=";
+                const ca = document.cookie.split(";");
+                for (let i = 0; i < ca.length; i++) {
+                    let c = ca[i];
+                    while (c.charAt(0) == " ") c = c.substring(1, c.length);
+                    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+                }
+                return null;
+            }
+
+            // Text-to-Speech setup - load from cookies or use defaults
+            let isMuted = getCookie("tts_muted") === "true" || false;
+            let currentVolume = parseFloat(getCookie("tts_volume")) || 0.8; // 80% volume by default
+            let currentUtterance = null;
+            let currentText = "";
 
             // Initialize Web Speech API
             const synth = window.speechSynthesis;
+
+            // Initialize UI from saved state
+            window.addEventListener("DOMContentLoaded", () => {
+                volumeSlider.value = currentVolume * 100;
+                muteIcon.src = isMuted ? "/images/muted.png" : "/images/unmuted.png";
+                muteIcon.alt = isMuted ? "Muted" : "Unmuted";
+            });
 
             function stripHtmlTags(html) {
                 const tmp = document.createElement("DIV");
@@ -76,18 +106,49 @@
 
                 if (!cleanText.trim()) return;
 
-                const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.volume = currentVolume;
-                utterance.rate = 0.95; // Slightly slower for clarity
-                utterance.pitch = 1.15; // Higher pitch for friendlier tone
+                currentText = cleanText;
+                currentUtterance = new SpeechSynthesisUtterance(cleanText);
+                currentUtterance.volume = currentVolume;
+                currentUtterance.rate = 0.95; // Slightly slower for clarity
+                currentUtterance.pitch = 1.15; // Higher pitch for friendlier tone
 
-                synth.speak(utterance);
+                currentUtterance.onend = () => {
+                    currentUtterance = null;
+                    currentText = "";
+                };
+
+                synth.speak(currentUtterance);
+            }
+
+            function restartSpeechWithNewVolume() {
+                if (!currentUtterance || !currentText || isMuted) return;
+
+                // Cancel current speech
+                synth.cancel();
+
+                // Create new utterance with updated volume
+                const newUtterance = new SpeechSynthesisUtterance(currentText);
+                newUtterance.volume = currentVolume;
+                newUtterance.rate = 0.95;
+                newUtterance.pitch = 1.15;
+
+                newUtterance.onend = () => {
+                    currentUtterance = null;
+                    currentText = "";
+                };
+
+                currentUtterance = newUtterance;
+                synth.speak(newUtterance);
             }
 
             // Mute button handler
             muteButton.addEventListener("click", () => {
                 isMuted = !isMuted;
-                muteButton.textContent = isMuted ? "🔇" : "🎤";
+                muteIcon.src = isMuted ? "/images/muted.png" : "/images/unmuted.png";
+                muteIcon.alt = isMuted ? "Muted" : "Unmuted";
+
+                // Save mute state to cookie
+                setCookie("tts_muted", isMuted);
 
                 // Cancel any ongoing speech when muting
                 if (isMuted && synth) {
@@ -95,14 +156,16 @@
                 }
             });
 
-            // Volume slider handler - updates volume in real-time without interruption
+            // Volume slider handler - restarts speech with new volume
             volumeSlider.addEventListener("input", (e) => {
                 currentVolume = e.target.value / 100;
 
-                // Update volume on currently playing utterance if any
-                if (synth && synth.speaking) {
-                    // Note: Volume changes apply to next speech, can't change current utterance mid-play
-                    // This is a browser limitation of Web Speech API
+                // Save volume to cookie
+                setCookie("tts_volume", currentVolume);
+
+                // Restart speech with new volume if currently playing
+                if (synth && synth.speaking && currentUtterance) {
+                    restartSpeechWithNewVolume();
                 }
             });
 
