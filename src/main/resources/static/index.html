@@ -11,7 +11,7 @@
         <div class="chat-container">
             <div class="chat-header">
                 <img src="/images/prs-logo.png" alt="PRS Logo" />
-                <span>Knowledge Agent</span>
+                <span>Agent</span>
             </div>
             <div class="chat-messages" id="chatMessages">
                 <div class="message agent">
@@ -78,9 +78,30 @@
             let currentVolume = parseFloat(getCookie("tts_volume")) || 0.8; // 80% volume by default
             let currentUtterance = null;
             let currentText = "";
+            let speechInitialized = false;
 
             // Initialize Web Speech API
             const synth = window.speechSynthesis;
+
+            // Detect if on mobile device
+            function isMobileDevice() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            }
+
+            // Initialize speech synthesis for mobile devices (iOS requires user interaction)
+            function initializeSpeech() {
+                if (speechInitialized || !synth) return;
+
+                // On mobile devices, especially iOS, we need to call speak() in response to user interaction
+                // to "prime" the speech synthesis
+                if (isMobileDevice()) {
+                    const utterance = new SpeechSynthesisUtterance("");
+                    utterance.volume = 0; // Silent
+                    synth.speak(utterance);
+                }
+
+                speechInitialized = true;
+            }
 
             // Initialize UI from saved state
             window.addEventListener("DOMContentLoaded", () => {
@@ -97,6 +118,11 @@
 
             function speakText(text) {
                 if (isMuted || !synth) return;
+
+                // Ensure speech is initialized (important for mobile)
+                if (!speechInitialized) {
+                    initializeSpeech();
+                }
 
                 // Cancel any ongoing speech
                 synth.cancel();
@@ -234,6 +260,11 @@
 
                 if (!userMessage) {
                     return;
+                }
+
+                // Initialize speech on first user interaction (critical for mobile/iOS)
+                if (!speechInitialized) {
+                    initializeSpeech();
                 }
 
                 // Add user message to chat
