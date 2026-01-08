@@ -23,6 +23,18 @@
                     <input type="text" id="messageInput" placeholder="Type your message here..." autocomplete="off" />
                     <button id="sendButton">Send</button>
                 </div>
+                <div class="audio-controls">
+                    <button id="muteButton" class="control-button" title="Mute/Unmute">🎤</button>
+                    <input
+                        type="range"
+                        id="volumeSlider"
+                        min="0"
+                        max="100"
+                        value="80"
+                        class="volume-slider"
+                        title="Volume"
+                    />
+                </div>
             </div>
         </div>
 
@@ -37,6 +49,62 @@
             const chatMessages = document.getElementById("chatMessages");
             const messageInput = document.getElementById("messageInput");
             const sendButton = document.getElementById("sendButton");
+            const muteButton = document.getElementById("muteButton");
+            const volumeSlider = document.getElementById("volumeSlider");
+
+            // Text-to-Speech setup
+            let isMuted = false;
+            let currentVolume = 0.8; // 80% volume by default
+
+            // Initialize Web Speech API
+            const synth = window.speechSynthesis;
+
+            function stripHtmlTags(html) {
+                const tmp = document.createElement("DIV");
+                tmp.innerHTML = html;
+                return tmp.textContent || tmp.innerText || "";
+            }
+
+            function speakText(text) {
+                if (isMuted || !synth) return;
+
+                // Cancel any ongoing speech
+                synth.cancel();
+
+                // Strip HTML tags from text
+                const cleanText = stripHtmlTags(text);
+
+                if (!cleanText.trim()) return;
+
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.volume = currentVolume;
+                utterance.rate = 0.95; // Slightly slower for clarity
+                utterance.pitch = 1.15; // Higher pitch for friendlier tone
+
+                synth.speak(utterance);
+            }
+
+            // Mute button handler
+            muteButton.addEventListener("click", () => {
+                isMuted = !isMuted;
+                muteButton.textContent = isMuted ? "🔇" : "🎤";
+
+                // Cancel any ongoing speech when muting
+                if (isMuted && synth) {
+                    synth.cancel();
+                }
+            });
+
+            // Volume slider handler - updates volume in real-time without interruption
+            volumeSlider.addEventListener("input", (e) => {
+                currentVolume = e.target.value / 100;
+
+                // Update volume on currently playing utterance if any
+                if (synth && synth.speaking) {
+                    // Note: Volume changes apply to next speech, can't change current utterance mid-play
+                    // This is a browser limitation of Web Speech API
+                }
+            });
 
             function addMessage(text, isUser) {
                 const messageDiv = document.createElement("div");
@@ -65,6 +133,11 @@
 
                 // Scroll to bottom
                 chatMessages.scrollTop = thetop;
+
+                // Speak agent responses
+                if (!isUser) {
+                    speakText(text);
+                }
             }
 
             function addLoadingIndicator() {
