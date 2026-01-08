@@ -19,6 +19,7 @@ import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.TokenCountEstimator;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.onnx.allminilml6v2q.AllMiniLmL6V2QuantizedEmbeddingModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiTokenCountEstimator;
 import dev.langchain4j.rag.content.retriever.ContentRetriever;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
@@ -35,6 +36,17 @@ public class PRSKnowledgeAgentConfiguration {
         return RedisClient.create(redisUrl);
     }
 
+    
+    
+
+    OpenAiChatModel openAiChatModel() {
+        OpenAiChatModel model = OpenAiChatModel.builder()
+        // ... other configurations (api key, model name, etc.)
+        .logRequests(true) // Enable logging of requests
+        .logResponses(true) // Enable logging of responses
+        .build();
+        return model;
+    }
 
     @Bean
     ChatMemoryProvider chatMemoryProvider() {
@@ -51,8 +63,6 @@ public class PRSKnowledgeAgentConfiguration {
 
     public EmbeddingStore<TextSegment> redisEmbeddingStore(@Value("${redis.url:redis://localhost:6379}") String uri,
                         @Value("${redis.dimension:384}") int dimension)  {        
-           try {Thread.sleep(5000);} catch (Throwable t) {};
-
           try {
 
             RedisEmbeddingStore rs = 
@@ -75,23 +85,24 @@ public class PRSKnowledgeAgentConfiguration {
     EmbeddingStore<TextSegment> embeddingStore(EmbeddingModel embeddingModel, ResourceLoader resourceLoader, TokenCountEstimator tokenizer) throws IOException {
 
         InMemoryEmbeddingStore<TextSegment> embeddingStore = new InMemoryEmbeddingStore<>();
+        
         return embeddingStore;
     }
 
     @Bean
-    ContentRetriever contentRetriever(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
+    EmbeddingStoreContentRetriever embeddingStoreContentRetriever(EmbeddingStore<TextSegment> embeddingStore, EmbeddingModel embeddingModel) {
 
         // You will need to adjust these parameters to find the optimal setting,
         // which will depend on multiple factors, for example:
         // - The nature of your data
         // - The embedding model you are using
-        int maxResults = 1;
+        int maxResults = 5;
         double minScore = 0.6;
 
         return EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(embeddingStore)
                 .embeddingModel(embeddingModel)
-                .maxResults(maxResults)
+                .maxResults(maxResults)                
                 .minScore(minScore)
                 .build();
     }

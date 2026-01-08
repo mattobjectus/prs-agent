@@ -2,6 +2,8 @@
 
 A Spring Boot application that uses LangChain4j and AI to provide intelligent responses about PRS Guitars based on ingested documentation and forum content. The application uses RAG (Retrieval-Augmented Generation) with Redis as a vector store for embeddings.
 
+Currently it is being hosted here: https://prs-agent-1089045512594.us-west1.run.app
+
 ## 🎯 Overview
 
 The PRS Knowledge Agent is an AI-powered chatbot that can answer questions about PRS Guitars. It uses:

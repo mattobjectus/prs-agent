@@ -34,7 +34,7 @@ This guide explains how to deploy the PRS Knowledge Agent application to Google 
 
 ```bash
 # Set your project ID
-export PROJECT_ID=your-project-id
+export PROJECT_ID=msm-secondary
 export REGION=us-central1
 
 # Set the project
@@ -100,7 +100,7 @@ If you prefer manual control:
 
 ```bash
 # 1. Build the image
-docker build -t gcr.io/$PROJECT_ID/prs-knowledge-agent:latest .
+docker build -t gcr.io/$PROJECT_ID/prs-agent:latest .
 
 # 2. Push to Container Registry
 docker push gcr.io/$PROJECT_ID/prs-knowledge-agent:latest
@@ -118,6 +118,11 @@ gcloud run deploy prs-knowledge-agent \
     --max-instances=10 \
     --min-instances=1
 ```
+
+gcloud secrets add-iam-policy-binding ai-api-key \
+ --member="serviceAccount:1089045512594-compute@developer.gserviceaccount.com" \
+ --role="roles/secretmanager.secretAccessor" \
+ --project=$PROJECT_ID
 
 ## ⚙️ Configuration
 

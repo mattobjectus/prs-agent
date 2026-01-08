@@ -39,21 +39,24 @@ public class StartupAsyncProcessor {
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
         // Start background logic in a new thread
+        
         new Thread(() -> {
           Resource emResource = resourceLoader.getResource("classpath:prs-docs.txt");        
           if (emResource == null) {
             throw new RuntimeException("Could nto find \"classpath:prs-docs.txt\"");
          }
+         
           try (InputStream inputStream = emResource.getInputStream()) {
             TextDocumentParser parser = new TextDocumentParser();
             dev.langchain4j.data.document.Document document = parser.parse(inputStream);
-            DocumentSplitter documentSplitter = DocumentSplitters.recursive(100, 0, tokenizer);
+            DocumentSplitter documentSplitter = DocumentSplitters.recursive(500, 100, tokenizer);
             EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
                     .documentSplitter(documentSplitter)
                     .embeddingModel(embeddingModel)
                     .embeddingStore(embeddingStore)
                     .build();
             ingestor.ingest(document);
+            
         } catch (Exception e ) {
             e.printStackTrace();
         }
